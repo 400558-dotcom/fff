@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFL GM Dynasty</title>
+<style>
+:root{--bg:#0b1220;--panel:#142238;--panel2:#1b2d46;--text:#f4f7fb;--muted:#a9b8ca;--green:#37d39a;--gold:#ffd166;--red:#ff7474}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#08101c,#10243b);color:var(--text);font:16px/1.45 system-ui,Arial,sans-serif}
+header{padding:22px 16px;text-align:center;background:#091321;border-bottom:1px solid #29405c}h1{margin:0;font-size:clamp(25px,5vw,38px)}header p{margin:6px 0 0;color:var(--muted)}
+main{max-width:1100px;margin:auto;padding:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid #2a405c;border-radius:14px;padding:16px;margin-bottom:14px}
+h2{font-size:20px;margin:0 0 12px}h3{margin:0 0 6px}.muted{color:var(--muted)}.money{font-size:27px;font-weight:800;color:var(--green)}
+button,select,input{font:inherit;border-radius:9px;border:1px solid #405a78;padding:10px;background:#0c1929;color:var(--text)}
+button{cursor:pointer;background:#245d82;border:0;font-weight:700}button:hover{filter:brightness(1.15)}button.secondary{background:#34465d}button.green{background:#16865e}button.red{background:#9d3f4a}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.controls input{width:115px}
+.player{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #2a405c}.player:last-child{border:0}
+.overall{font-weight:800;color:var(--gold)}.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#293d57;color:#dbe9f8;font-size:12px;margin-right:5px}
+.teamrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #2a405c}
+.notice{padding:10px;border-radius:9px;background:#203a4b;color:#d8f4ff;margin-top:10px}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:8px;border-bottom:1px solid #2a405c}th{color:var(--muted)}
+.hidden{display:none}.small{font-size:13px}
+@media(max-width:560px){main{padding:10px}.player{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<header><h1>🏈 NFL GM Dynasty</h1><p>Build a team. Win the auction. Take the championship.</p></header>
+<main>
+<div class="grid">
+ <section class="card"><h2>General Manager 1</h2><div class="money" id="cash0">$22</div><div class="muted" id="count0">0 / 5 roster spots filled</div><div id="roster0"></div></section>
+ <section class="card"><h2>General Manager 2</h2><div class="money" id="cash1">$22</div><div class="muted" id="count1">0 / 5 roster spots filled</div><div id="roster1"></div></section>
+</div>
+<section class="card">
+<h2>Live Auction</h2>
+<div class="grid">
+ <div><div class="muted">Current player / defense</div><h3 id="lotName">Loading auction…</h3><span class="tag" id="lotPos"></span><span class="overall" id="lotOvr"></span></div>
+ <div><div class="muted">Current high bid</div><div class="money" id="highBid">$0</div><div id="highWho" class="muted">No bids yet</div></div>
+</div>
+<div class="controls" style="margin-top:14px">
+ <label>GM <select id="bidder"><option value="0">GM 1</option><option value="1">GM 2</option></select></label>
+ <label>Offer $ <input id="offer" type="number" min="1" max="22" value="1"></label>
+ <button onclick="bid()">Place offer</button><button class="secondary" onclick="pass()">Pass</button><button class="green" onclick="sell()">Sell to high bidder</button>
+ <button class="secondary" onclick="nextLot()">Skip lot</button>
+</div><div id="auctionMsg" class="notice">Choose an opening offer. There are no preset starting prices.</div>
+</section>
+
+<section class="card">
+<h2>🎲 Random Team & Player Picker</h2>
+<p class="muted">Pick a random NFL team, then draw a player from that team's selected position. This uses the sample player pool currently in the game.</p>
+<div class="controls">
+ <label>Position <select id="randomPos"><option value="ANY">Any position</option><option value="QB">QB</option><option value="RB">RB</option><option value="WR">WR</option><option value="TE">TE</option><option value="DEF">Defense</option></select></label>
+ <button class="green" onclick="randomTeamPlayer()">Randomize team + player</button>
+</div>
+<div id="randomResult" class="notice">Your random team and matching player will appear here.</div>
+</section>
+
+<div class="grid">
+<section class="card"><h2>Available Auction Pool</h2><div id="pool" class="small"></div></section>
+<section class="card"><h2>Season & Championship</h2><p class="muted">After both teams fill their five roster spots, simulate a season. Results are a simple game simulation, not real NFL predictions.</p><button class="green" onclick="simulate()">Simulate season</button><div id="season" style="margin-top:12px"></div></section>
+</div>
+<section class="card"><h2>How to play</h2><ol><li>Each GM starts with $22 in game credits.</li><li>Bid any amount you want; the other GM can raise or pass.</li><li>If both pass before any bid, the lot is skipped.</li><li>Each roster has one QB, RB, WR, TE, and NFL team defense.</li><li>Once both rosters are full, simulate the season.</li></ol><p class="small muted">Player overalls and the sample player pool are illustrative game ratings, not verified live 2026 season statistics. Add or update players as desired.</p></section>
+</main>
+<script>
+const lots=[
+{name:"Josh Allen",team:"Bills",pos:"QB",ovr:97},{name:"Lamar Jackson",team:"Ravens",pos:"QB",ovr:96},{name:"Joe Burrow",team:"Bengals",pos:"QB",ovr:94},{name:"Jalen Hurts",team:"Eagles",pos:"QB",ovr:92},
+{name:"Christian McCaffrey",team:"49ers",pos:"RB",ovr:96},{name:"Saquon Barkley",team:"Eagles",pos:"RB",ovr:95},{name:"Derrick Henry",team:"Ravens",pos:"RB",ovr:93},{name:"Bijan Robinson",team:"Falcons",pos:"RB",ovr:92},
+{name:"Justin Jefferson",team:"Vikings",pos:"WR",ovr:99},{name:"Ja'Marr Chase",team:"Bengals",pos:"WR",ovr:98},{name:"CeeDee Lamb",team:"Cowboys",pos:"WR",ovr:96},{name:"Tyreek Hill",team:"Dolphins",pos:"WR",ovr:95},
+{name:"Travis Kelce",team:"Chiefs",pos:"TE",ovr:94},{name:"T.J. Hockenson",team:"Vikings",pos:"TE",ovr:90},{name:"Mark Andrews",team:"Ravens",pos:"TE",ovr:89},{name:"Sam LaPorta",team:"Lions",pos:"TE",ovr:89},
+...["49ers","Chiefs","Ravens","Bills","Cowboys","Eagles","Lions","Browns","Steelers","Dolphins","Packers","Bengals","Texans","Rams","Buccaneers","Vikings","Jets","Saints","Seahawks","Jaguars","Colts","Falcons","Bears","Broncos","Chargers","Giants","Titans","Commanders","Cardinals","Patriots","Raiders","Panthers"].map((t,i)=>({name:t+" Defense",team:t,pos:"DEF",ovr:[95,94,93,92,91,90,89,88,87,86,85,84,83,82,81,80,79,78,77,76,75,74,73,72,71,70,69,68,67,66,65,64][i]}))
+];
+let teams=[{cash:22,roster:[]},{cash:22,roster:[]}],idx=0,high=-1,highBid=0,passed=new Set(),sold=new Set();
+function current(){return lots[idx]}
+function required(p){return p==="DEF"?"DEF":p}
+function filled(team,pos){return team.roster.some(x=>x.pos===pos)}
+
+function randomTeamPlayer(){
+ const pos=document.getElementById("randomPos").value;
+ const teamNames=["49ers","Bears","Bengals","Bills","Broncos","Browns","Buccaneers","Cardinals","Chargers","Chiefs","Colts","Commanders","Cowboys","Dolphins","Eagles","Falcons","Giants","Jaguars","Jets","Lions","Packers","Panthers","Patriots","Raiders","Rams","Ravens","Saints","Seahawks","Steelers","Texans","Titans","Vikings"];
+ let candidates=lots.filter(x=>x.team && (pos==="ANY" || x.pos===pos));
+ if(!candidates.length){document.getElementById("randomResult").textContent="No sample players are available for that position yet.";return;}
+ const chosen=candidates[Math.floor(Math.random()*candidates.length)];
+ const team=chosen.team;
+ document.getElementById("randomResult").innerHTML=`<b>${team}</b><br>${chosen.name} <span class="tag">${chosen.pos}</span> <span class="overall">OVR ${chosen.ovr}</span><br><span class="small muted">Random draw from the game's sample player pool. The current sample includes selected offensive players plus all 32 team defenses.</span>`;
+}
+
+function render(){
+let p=current();document.getElementById("lotName").textContent=p?p.name:"Auction complete";document.getElementById("lotPos").textContent=p?p.pos:"";document.getElementById("lotOvr").textContent=p?"OVR "+p.ovr:"";
+document.getElementById("highBid").textContent="$"+highBid;document.getElementById("highWho").textContent=high<0?"No bids yet":"GM "+(high+1)+" is leading";
+for(let t=0;t<2;t++){document.getElementById("cash"+t).textContent="$"+teams[t].cash;document.getElementById("count"+t).textContent=teams[t].roster.length+" / 5 roster spots filled";document.getElementById("roster"+t).innerHTML=teams[t].roster.map(x=>`<div class="teamrow"><span>${x.pos}: ${x.name}</span><b>$${x.price}</b></div>`).join("")||'<p class="muted">No players yet</p>'}
+document.getElementById("pool").innerHTML=lots.map((x,i)=>`<div class="player"><span>${x.name} <span class="tag">${x.pos}</span></span><b class="overall">${x.ovr}</b></div>`).join("");
+}
+function msg(s){document.getElementById("auctionMsg").textContent=s}
+function bid(){let t=+document.getElementById("bidder").value,amount=+document.getElementById("offer").value,p=current();if(!p)return;
+if(teams[t].roster.length>=5)return msg("That GM has a full roster.");if(filled(teams[t],p.pos))return msg("That GM already has a "+p.pos+".");if(amount<1||amount>teams[t].cash)return msg("Offer must be at least $1 and no more than that GM's remaining budget.");if(amount<=highBid)return msg("Your offer must be higher than the current high bid.");high=t;highBid=amount;passed.delete(t);render();msg("GM "+(t+1)+" offers $"+amount+". The other GM can raise or pass.");}
+function pass(){let t=+document.getElementById("bidder").value;if(high<0){passed.add(t);if(passed.size===2){msg("Both GMs passed. This lot is unsold.");nextLot()}else msg("GM "+(t+1)+" passed. The other GM can open the bidding.");}else{if(t===high)return msg("The leading GM cannot pass their own high bid. The other GM should pass or raise.");passed.add(t);msg("GM "+(t+1)+" passed. Click Sell to high bidder to finish the auction.");}}
+function sell(){if(high<0)return msg("There is no high bid. Both GMs can pass to skip the lot.");let p=current(),t=high;if(teams[t].roster.length>=5||filled(teams[t],p.pos))return msg("The winning GM no longer has an available roster slot for this position.");teams[t].cash-=highBid;teams[t].roster.push({...p,price:highBid});sold.add(idx);msg(p.name+" sold to GM "+(t+1)+" for $"+highBid+".");nextLot(false);}
+function nextLot(show=true){idx++;high=-1;highBid=0;passed.clear();if(idx>=lots.length)idx=lots.length;render();if(show)msg("Moved to the next auction lot.");if(idx>=lots.length)msg("Auction pool complete. Simulate the season when both rosters are ready.");}
+function simulate(){let a=teams[0],b=teams[1];if(a.roster.length!==5||b.roster.length!==5){document.getElementById("season").textContent="Both GMs need a full five-player roster before the season can be simulated.";return}
+function score(t){return t.roster.reduce((s,p)=>s+p.ovr,0)+Math.random()*35}
+let sa=score(a),sb=score(b),winner=sa>=sb?1:2;document.getElementById("season").innerHTML=`<h3>Championship Result</h3><p>GM 1 season score: <b>${sa.toFixed(1)}</b></p><p>GM 2 season score: <b>${sb.toFixed(1)}</b></p><h2>${winner===1?"GM 1":"GM 2"} wins the championship! 🏆</h2><p class="muted">This is a lightweight simulated result based on roster overalls and randomness.</p>`}
+render();
+</script>
+</body></html>
